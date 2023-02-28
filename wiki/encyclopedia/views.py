@@ -1,10 +1,19 @@
 from django.shortcuts import render
 from django import forms
+from markdown2 import Markdown
+
+import random
+
+
 
 from . import util
 
 class SearchForm(forms.Form):
     q = forms.CharField(label="Search Encyclopedia")
+
+class CreateForm(forms.Form):
+    title = forms.CharField(label="Title")
+    content = forms.CharField(label="Content")
   
 def index(request):
     """
@@ -14,12 +23,54 @@ def index(request):
         "entries": util.list_entries()
     })
 
+def create(request):
+    """
+    Displays the create page.
+    """
+    if request.method == "POST":
+
+        # Take in the data the user submitted and save it as form
+        form = CreateForm(request.POST)
+
+        # Check if form data is valid (server-side)
+        if form.is_valid():
+
+            # Isolate the title and content from the 'cleaned' version of form data
+            title = form.cleaned_data["title"]
+            content = form.cleaned_data["content"]
+
+            # Check if the title already exists
+            if util.get_entry(title) is None:
+                util.save_entry(title, content)
+                return render(request, "encyclopedia/entry.html", {
+                    "title": title,
+                    "content": util.get_entry(title)
+                })
+            else:
+                return render(request, "encyclopedia/error.html", {
+                    "message": "Entry already exists"
+                })
+            
+        else:
+
+            # If the form is invalid, re-render the page with existing information.
+            return render(request, "encyclopedia/error.html", {
+                "message": "Invalid form"
+            })
+    else:
+
+        # If the request method is not POST, render the page with a blank form.
+        return render(request, "encyclopedia/create.html", {
+            "form": CreateForm()
+        })
+
 def entry(request, title):
     """
     Displays the requested entry.
     """
     # If the entry does not exist, display an error message
-    if util.get_entry(title) is None:
+    entry_content = util.get_entry(title)
+    if entry_content is None:
         return render(request, "encyclopedia/error.html", {
             "message": "Entry not found"
         })
@@ -27,8 +78,63 @@ def entry(request, title):
         # If the entry exists, display it
         return render(request, "encyclopedia/entry.html", {
             "title": title,
-            "content": util.get_entry(title)
+            "content": Markdown().convert(entry_content),
         })
+    
+def edit(request, title):
+    """
+    Displays the edit page.
+    """
+    if request.method == "POST":
+
+        # Take in the data the user submitted and save it as form
+        form = CreateForm(request.POST)
+
+        # Check if form data is valid (server-side)
+        if form.is_valid():
+
+            # Isolate the title and content from the 'cleaned' version of form data
+            title = form.cleaned_data["title"]
+            content = form.cleaned_data["content"]
+
+            util.save_entry(title, content)
+
+            return render(request, "encyclopedia/entry.html", {
+                "title": title,
+                "content": util.get_entry(title)
+            })
+            
+        else:
+
+            # If the form is invalid, re-render the page with existing information.
+            return render(request, "encyclopedia/error.html", {
+                "message": "Invalid form"
+            })
+    else:
+
+        # If the request method is not POST, render the page with a blank form.
+        return render(request, "encyclopedia/edit.html", {
+            "form": CreateForm(initial={'title': title, 'content': util.get_entry(title)}),
+            "title": title,
+            "content": util.get_entry(title),
+        })
+    
+def random_page(request):
+    """
+    Displays a random entry.
+    """    
+
+    entries = util.list_entries()
+    if not entries:
+        return render(request, "encyclopedia/error.html", {
+            "message": "No entries found"
+        })
+    title = random.choice(entries)
+    return render(request, "encyclopedia/entry.html", {
+        "title": title,
+        "content": util.get_entry(title)
+    })
+
     
 def search(request):
     """
@@ -86,3 +192,5 @@ def search(request):
         return render(request, "encyclopedia/error.html", {
             "message": "Invalid request"
         })
+    
+

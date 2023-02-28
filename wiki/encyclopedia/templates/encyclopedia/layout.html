@@ -20,15 +20,21 @@
                 </form>
                 
                 <div>
-                    <a href="{% url 'wiki:index' %}">Home</a>
+                    <a href="{% url 'wiki:index' %}">
+                        Home
+                    </a>
                 </div>
                 
                 <div>
-                    Create New Page
+                    <a href="{% url 'wiki:create' %}">
+                        Create New Page
+                    </a>
                 </div>
                 
                 <div>
-                    Random Page
+                    <a href="{% url 'wiki:random_page' %}">
+                        Random Page
+                    </a>
                 </div>
                 
                 {% block nav %}
